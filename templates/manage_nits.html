@@ -213,7 +213,11 @@
                             {% for nit in nits %}
                             <tr data-nit="{{ nit.nit }}">
                                 <td>{{ nit.nit }}</td>
-                                <td>{{ nit.empresa }}</td>
+                                <td>
+                                    <span class="empresa-text">{{ nit.empresa }}</span>
+                                    <input type="text" class="form-control empresa-input" 
+                                           style="display: none;" value="{{ nit.empresa }}">
+                                </td>
                                 <td>
                                     <span class="categoria-text">{{ nit.categoria }}</span>
                                     <input type="text" class="form-control categoria-input" 
@@ -315,6 +319,37 @@
                 const result = await response.json();
                 if (response.ok) {
                     showFlashMessage('NIT agregado exitosamente');
+                    // Add the new NIT to the table
+                    const tableBody = document.getElementById('nitsTableBody');
+                    const newRow = document.createElement('tr');
+                    newRow.dataset.nit = nit;
+                    newRow.innerHTML = `
+                        <td>${nit}</td>
+                        <td>
+                            <span class="empresa-text">${empresa}</span>
+                            <input type="text" class="form-control empresa-input" style="display: none;" value="${empresa}">
+                        </td>
+                        <td>
+                            <span class="categoria-text">${categoria}</span>
+                            <input type="text" class="form-control categoria-input" style="display: none;" value="${categoria}">
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-warning edit-btn">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                                <button class="btn btn-sm btn-success save-btn" style="display: none;">
+                                    <i class="fas fa-save"></i> Guardar
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-btn">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(newRow);
+                    // Re-attach event listeners for the new row
+                    attachEventListeners(newRow);
                     location.reload();
                 } else {
                     showFlashMessage(result.error, 'danger');
@@ -325,6 +360,96 @@
                 hideLoading();
             }
         });
+
+        function attachEventListeners(row) {
+            row.querySelector('.edit-btn').addEventListener('click', function() {
+                const empresaText = row.querySelector('.empresa-text');
+                const empresaInput = row.querySelector('.empresa-input');
+                const categoriaText = row.querySelector('.categoria-text');
+                const categoriaInput = row.querySelector('.categoria-input');
+                const saveBtn = row.querySelector('.save-btn');
+                
+                // Mostrar input y ocultar texto
+                empresaText.style.display = 'none';
+                empresaInput.style.display = 'block';
+                categoriaText.style.display = 'none';
+                categoriaInput.style.display = 'block';
+                this.style.display = 'none';
+                saveBtn.style.display = 'inline-block';
+            });
+
+            row.querySelector('.save-btn').addEventListener('click', async function() {
+                const nit = row.dataset.nit;
+                const empresaInput = row.querySelector('.empresa-input');
+                const empresaText = row.querySelector('.empresa-text');
+                const categoriaInput = row.querySelector('.categoria-input');
+                const categoriaText = row.querySelector('.categoria-text');
+                const editBtn = row.querySelector('.edit-btn');
+                const newEmpresa = empresaInput.value;
+                const newCategoria = categoriaInput.value;
+
+                showLoading();
+                try {
+                    const response = await fetch(`/nit/${nit}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ empresa: newEmpresa, categoria: newCategoria })
+                    });
+
+                    if (response.ok) {
+                        // Actualizar la vista
+                        empresaText.textContent = newEmpresa;
+                        empresaText.style.display = 'block';
+                        empresaInput.style.display = 'none';
+                        categoriaText.textContent = newCategoria;
+                        categoriaText.style.display = 'block';
+                        categoriaInput.style.display = 'none';
+                        this.style.display = 'none';
+                        editBtn.style.display = 'inline-block';
+                        showFlashMessage('Empresa y categoría actualizadas exitosamente');
+                    } else {
+                        const result = await response.json();
+                        showFlashMessage(result.error || 'Error al actualizar la empresa y categoría', 'danger');
+                    }
+                } catch (error) {
+                    showFlashMessage('Error al procesar la solicitud', 'danger');
+                } finally {
+                    hideLoading();
+                }
+            });
+
+            row.querySelector('.delete-btn').addEventListener('click', async function() {
+                if (!confirm('¿Está seguro de que desea eliminar este NIT?')) {
+                    return;
+                }
+
+                const nit = row.dataset.nit;
+
+                showLoading();
+                try {
+                    const response = await fetch(`/nit/${nit}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        row.remove();
+                        showFlashMessage('NIT eliminado exitosamente');
+                        // Actualizar la tabla y paginación
+                        filteredRows = Array.from(document.querySelectorAll('#nitsTableBody tr'));
+                        updateTable();
+                    } else {
+                        const result = await response.json();
+                        showFlashMessage(result.error || 'Error al eliminar el NIT', 'danger');
+                    }
+                } catch (error) {
+                    showFlashMessage('Error al procesar la solicitud', 'danger');
+                } finally {
+                    hideLoading();
+                }
+            });
+        }
 
         // Función para actualizar la tabla
         function updateTable() {
@@ -423,11 +548,15 @@
             document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', function() {
             const row = this.closest('tr');
+            const empresaText = row.querySelector('.empresa-text');
+            const empresaInput = row.querySelector('.empresa-input');
             const categoriaText = row.querySelector('.categoria-text');
             const categoriaInput = row.querySelector('.categoria-input');
             const saveBtn = row.querySelector('.save-btn');
             
             // Mostrar input y ocultar texto
+            empresaText.style.display = 'none';
+            empresaInput.style.display = 'block';
             categoriaText.style.display = 'none';
             categoriaInput.style.display = 'block';
             this.style.display = 'none';
@@ -440,9 +569,12 @@
         button.addEventListener('click', async function() {
             const row = this.closest('tr');
             const nit = row.dataset.nit;
+            const empresaInput = row.querySelector('.empresa-input');
+            const empresaText = row.querySelector('.empresa-text');
             const categoriaInput = row.querySelector('.categoria-input');
             const categoriaText = row.querySelector('.categoria-text');
             const editBtn = row.querySelector('.edit-btn');
+            const newEmpresa = empresaInput.value;
             const newCategoria = categoriaInput.value;
 
             showLoading();
@@ -450,22 +582,25 @@
                 const response = await fetch(`/nit/${nit}`, {
                     method: 'PUT',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/json',
                     },
-                    body: `categoria=${encodeURIComponent(newCategoria)}`
+                    body: JSON.stringify({ empresa: newEmpresa, categoria: newCategoria })
                 });
 
                 if (response.ok) {
                     // Actualizar la vista
+                    empresaText.textContent = newEmpresa;
+                    empresaText.style.display = 'block';
+                    empresaInput.style.display = 'none';
                     categoriaText.textContent = newCategoria;
                     categoriaText.style.display = 'block';
                     categoriaInput.style.display = 'none';
                     this.style.display = 'none';
                     editBtn.style.display = 'inline-block';
-                    showFlashMessage('Categoría actualizada exitosamente');
+                    showFlashMessage('Empresa y categoría actualizadas exitosamente');
                 } else {
                     const result = await response.json();
-                    showFlashMessage(result.error || 'Error al actualizar la categoría', 'danger');
+                    showFlashMessage(result.error || 'Error al actualizar la empresa y categoría', 'danger');
                 }
             } catch (error) {
                 showFlashMessage('Error al procesar la solicitud', 'danger');

@@ -217,16 +217,18 @@ def manage_nits():
     """Render the NIT management interface"""
     conn = get_db_connection()
     nits = conn.execute('SELECT * FROM emisores ORDER BY nit').fetchall()
+    categorias = conn.execute('SELECT DISTINCT categoria FROM emisores').fetchall()
     conn.close()
-    return render_template('manage_nits.html', nits=nits)
+    return render_template('manage_nits.html', nits=nits, categorias=[row['categoria'] for row in categorias])
 
 @app.route('/nit', methods=['POST'])
 def add_nit():
     """Add a single NIT"""
     nit = request.form.get('nit')
     categoria = request.form.get('categoria')
+    empresa = request.form.get('empresa')
     
-    if not nit or not categoria:
+    if not nit or not categoria or not empresa:
         return jsonify({'error': 'NIT, empresa y categoría son requeridos'}), 400
     
     conn = get_db_connection()
@@ -242,20 +244,22 @@ def add_nit():
 
 @app.route('/nit/<nit>', methods=['PUT'])
 def update_nit(nit):
-    """Update a NIT's category"""
-    categoria = request.json.get('categoria')
+    """Update a NIT's company name and category"""
+    data = request.get_json()
+    empresa = data.get('empresa')
+    categoria = data.get('categoria')
     
-    if not categoria:
-        return jsonify({'error': 'Categoría es requerida'}), 400
+    if not empresa or not categoria:
+        return jsonify({'error': 'Empresa y categoría son requeridas'}), 400
     
     conn = get_db_connection()
     try:
-        result = conn.execute('UPDATE emisores SET categoria = ? WHERE nit = ?',
-                            (categoria, nit))
+        result = conn.execute('UPDATE emisores SET empresa = ?, categoria = ? WHERE nit = ?',
+                            (empresa, categoria, nit))
         conn.commit()
         if result.rowcount == 0:
             return jsonify({'error': 'NIT no encontrado'}), 404
-        return jsonify({'message': 'Categoría actualizada exitosamente'})
+        return jsonify({'message': 'Empresa y categoría actualizadas exitosamente'})
     finally:
         conn.close()
 
