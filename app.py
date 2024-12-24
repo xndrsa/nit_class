@@ -312,10 +312,6 @@ def assign_categories():
         flash(f'Error al procesar el archivo: {str(e)}')
         return redirect(url_for('index'))
 
-@app.route('/')
-def index2():
-    return render_template('index.html')
-
 # [Rest of the code remains the same]
 
 if __name__ == '__main__':
