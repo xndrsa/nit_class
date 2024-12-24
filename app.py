@@ -1,107 +1,3 @@
-# import os
-# import pandas as pd
-# import sqlite3
-# from flask import Flask, render_template, request, redirect, url_for, send_file
-# import io
-
-# app = Flask(__name__)
-# app.config['UPLOAD_FOLDER'] = 'uploads'
-# app.config['ALLOWED_EXTENSIONS'] = {'xls', 'xlsx', 'csv'}
-
-# # Crear carpeta de carga si no existe
-# os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# # Función para verificar si el archivo es válido
-# def allowed_file(filename):
-#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
-# # Conectar a la base de datos SQLite
-# def get_db_connection():
-#     conn = sqlite3.connect('database/database.db')
-#     conn.row_factory = sqlite3.Row  # Permite acceso por nombre de columna
-#     return conn
-
-# # Función para obtener la categoría del NIT
-# def get_categoria_by_nit(nit):
-#     conn = get_db_connection()
-#     categoria = conn.execute('SELECT categoria FROM emisores WHERE nit = ?', (nit,)).fetchone()
-#     conn.close()
-#     return categoria
-
-# # Función para agregar un nuevo NIT y categoría
-# def add_new_nit(nit, categoria):
-#     conn = get_db_connection()
-#     conn.execute('INSERT INTO emisores (nit, categoria) VALUES (?, ?)', (nit, categoria))
-#     conn.commit()
-#     conn.close()
-
-# # Página principal para cargar archivo
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
-
-# @app.route('/upload', methods=['POST'])
-# def upload_file():
-#     if 'file' not in request.files:
-#         return redirect(request.url)
-    
-#     file = request.files['file']
-    
-#     if file and allowed_file(file.filename):
-#         filename = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-#         file.save(filename)
-
-#         # Leer el archivo con pandas
-#         if file.filename.endswith('.csv'):
-#             df = pd.read_csv(filename)
-#         else:
-#             df = pd.read_excel(filename)
-        
-#         # Verificar si existe la columna 'NIT del emisor'
-#         if 'NIT del emisor' not in df.columns:
-#             return "La columna 'NIT del emisor' no está en el archivo."
-        
-#         nits = df['NIT del emisor'].unique()
-#         matched_nits = []  # NITs que ya tienen categoría
-#         unmatched_nits = []  # NITs que no tienen categoría
-#         nits_con_categoria = {}  # Diccionario para las categorías asignadas
-
-#         # Comparar todos los NITs con la base de datos
-#         for nit in nits:
-#             categoria = get_categoria_by_nit(nit)
-#             if categoria:
-#                 nits_con_categoria[nit] = categoria['categoria']
-#                 matched_nits.append(nit)
-#             else:
-#                 nits_con_categoria[nit] = None
-#                 unmatched_nits.append(nit)
-
-#         # Si encontramos NITs sin categoría, mostramos la página para asignarles categorías
-#         if unmatched_nits:
-#             return render_template('assign_category.html', nits=unmatched_nits, filename=file.filename)
-
-#         # Después de asignar categorías, actualizamos el DataFrame con las categorías
-#         df['categoria'] = df['NIT del emisor'].map(lambda x: nits_con_categoria.get(x, None))
-
-#         # Guardar el archivo actualizado en memoria
-#         output = io.BytesIO()
-#         if filename.endswith('.csv'):
-#             df.to_csv(output, index=False)
-#             output.seek(0)
-#             return send_file(output, as_attachment=True, download_name='archivo_actualizado.csv', mimetype='text/csv')
-#         else:
-#             df.to_excel(output, index=False)
-#             output.seek(0)
-#             return send_file(output, as_attachment=True, download_name='archivo_actualizado.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    
-#     return redirect(url_for('index'))
-
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
-
-
 import os
 import pandas as pd
 import sqlite3
@@ -113,8 +9,8 @@ app = Flask(__name__)
 app.config.update(
     UPLOAD_FOLDER='uploads',
     ALLOWED_EXTENSIONS={'xls', 'xlsx', 'csv'},
-    MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max-limit
-    SECRET_KEY='your-secret-key-here'  # Necesario para flash messages
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024  # 16MB max-limit
+    #SECRET_KEY='your-secret-key-here'  # Necesario para flash messages
 )
 
 # Crear carpetas necesarias
@@ -223,7 +119,6 @@ def upload_file():
             flash(f'Error al procesar el archivo: {str(e)}')
             return redirect(url_for('index'))
 
-# [Previous code remains the same until assign_categories function]
 
 @app.route('/assign_categories', methods=['POST'])
 def assign_categories():
@@ -315,4 +210,4 @@ def assign_categories():
 # [Rest of the code remains the same]
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

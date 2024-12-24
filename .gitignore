@@ -2,7 +2,7 @@
 test.db
 *.log
 *.ipynb
-/nit_class
+/nit_clas
 __pycache__
 /nit_class/__pycache__
 *.pyc
