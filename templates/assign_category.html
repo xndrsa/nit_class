@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Asignar Categorías</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Asignar Categorías a NITs</h1>
+        
+        <form method="post" action="{{ url_for('assign_categories') }}">
+            <input type="hidden" name="filename" value="{{ filename }}">
+            
+            {% for nit in nits %}
+            <div class="form-group">
+                <label for="categoria_{{ nit }}">Categoría para NIT {{ nit }}:</label>
+                <input type="text" name="categoria_{{ nit }}" id="categoria_{{ nit }}" required>
+            </div>
+            {% endfor %}
+            
+            <input type="submit" value="Guardar Categorías">
+        </form>
+        <button onclick="window.location.href='{{ url_for('index') }}'">Volver al Inicio</button>
+    </div>
+</body>
+</html>
+
+

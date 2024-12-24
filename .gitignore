@@ -1,0 +1,8 @@
+*.xls
+*.db
+*.log
+*.ipynb
+/nit_class
+__pycache__
+/nit_class/__pycache__
+*.pyc
