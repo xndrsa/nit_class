@@ -1,5 +1,5 @@
 *.xls
-*.db
+test.db
 *.log
 *.ipynb
 /nit_class

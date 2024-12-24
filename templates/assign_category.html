@@ -1,25 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asignar Categorías</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom right, #29acb8, #1f76b8);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
+
         .container {
-            background-color: #f5f5f5;
-            padding: 20px;
-            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
         }
+
+        h1 {
+            color: #1f76b8;
+            margin-bottom: 30px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
         .form-group {
-            margin-bottom: 15px;
+            text-align: left;
         }
+
         label {
+            font-weight: bold;
+            color: #34495e;
             display: block;
             margin-bottom: 5px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #29acb8;
+            outline: none;
+        }
+
+        button {
+            background-color: #29acb8;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background-color: #ccc;
+            color: #444;
+            margin-top: 20px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #bbb;
         }
     </style>
 </head>
@@ -27,7 +100,7 @@
     <div class="container">
         <h1>Asignar Categorías a NITs</h1>
         
-        <form method="post" action="{{ url_for('assign_categories') }}">
+        <form id="assignForm" method="post" action="{{ url_for('assign_categories') }}">
             <input type="hidden" name="filename" value="{{ filename }}">
             
             {% for nit in nits %}
@@ -37,10 +110,46 @@
             </div>
             {% endfor %}
             
-            <input type="submit" value="Guardar Categorías">
+            <button type="submit" id="submitButton">Guardar Categorías y Volver al Inicio</button>
         </form>
-        <button onclick="window.location.href='{{ url_for('index') }}'">Volver al Inicio</button>
     </div>
+    <script>
+        document.getElementById('assignForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evita el comportamiento predeterminado del formulario
+            
+            // Envía el formulario usando Fetch API
+            const formData = new FormData(this);
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Descarga el archivo generado
+                    return response.blob();
+                } else {
+                    throw new Error('Error al guardar las categorías.');
+                }
+            })
+            .then(blob => {
+                // Crear un enlace para descargar el archivo
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'categorias_asignadas.csv'; // Cambia esto por el nombre adecuado
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                // Redirige al índice después de la descarga
+                window.location.href = "{{ url_for('index') }}";
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Hubo un problema al guardar las categorías o descargar el archivo.');
+            });
+        });
+    </script>
 </body>
 </html>
 
