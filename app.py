@@ -4,6 +4,8 @@ import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 import io
 from werkzeug.utils import secure_filename
+from flask import jsonify
+import csv
 
 app = Flask(__name__)
 app.config.update(
@@ -207,7 +209,121 @@ def assign_categories():
         flash(f'Error al procesar el archivo: {str(e)}')
         return redirect(url_for('index'))
 
-# [Rest of the code remains the same]
+# esta seccion es para la interaccion con la DDBB
+
+
+@app.route('/manage_nits')
+def manage_nits():
+    """Render the NIT management interface"""
+    conn = get_db_connection()
+    nits = conn.execute('SELECT * FROM emisores ORDER BY nit').fetchall()
+    conn.close()
+    return render_template('manage_nits.html', nits=nits)
+
+@app.route('/nit', methods=['POST'])
+def add_nit():
+    """Add a single NIT"""
+    nit = request.form.get('nit')
+    categoria = request.form.get('categoria')
+    
+    if not nit or not categoria:
+        return jsonify({'error': 'NIT, empresa y categoría son requeridos'}), 400
+    
+    conn = get_db_connection()
+    try:
+        conn.execute('INSERT INTO emisores (nit, empresa, categoria) VALUES (?, ?, ?)',
+                    (nit, empresa, categoria))  
+        conn.commit()
+        return jsonify({'message': 'NIT agregado exitosamente'})
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'El NIT ya existe'}), 400
+    finally:
+        conn.close()
+
+@app.route('/nit/<nit>', methods=['PUT'])
+def update_nit(nit):
+    """Update a NIT's category"""
+    categoria = request.json.get('categoria')
+    
+    if not categoria:
+        return jsonify({'error': 'Categoría es requerida'}), 400
+    
+    conn = get_db_connection()
+    try:
+        result = conn.execute('UPDATE emisores SET categoria = ? WHERE nit = ?',
+                            (categoria, nit))
+        conn.commit()
+        if result.rowcount == 0:
+            return jsonify({'error': 'NIT no encontrado'}), 404
+        return jsonify({'message': 'Categoría actualizada exitosamente'})
+    finally:
+        conn.close()
+
+@app.route('/nit/<nit>', methods=['DELETE'])
+def delete_nit(nit):
+    """Delete a NIT"""
+    conn = get_db_connection()
+    try:
+        result = conn.execute('DELETE FROM emisores WHERE nit = ?', (nit,))
+        conn.commit()
+        if result.rowcount == 0:
+            return jsonify({'error': 'NIT no encontrado'}), 404
+        return jsonify({'message': 'NIT eliminado exitosamente'})
+    finally:
+        conn.close()
+
+@app.route('/bulk_upload', methods=['POST'])
+def bulk_upload():
+    """Handle bulk upload of NITs via CSV"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+    
+    file = request.files['file']
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return jsonify({'error': 'Archivo inválido. Debe ser un CSV'}), 400
+    
+    conn = get_db_connection()
+    results = {
+        'success': 0,
+        'errors': []
+    }
+    
+    try:
+        # Create a StringIO object from the file content
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_reader = csv.DictReader(stream)
+        
+        # Verify required columns
+        required_columns = {'nit', 'empresa', 'categoria'}
+        if not required_columns.issubset(csv_reader.fieldnames):
+            return jsonify({'error': 'El CSV debe contener las columnas: nit, empresa, categoria'}), 400
+        
+        for row in csv_reader:
+            try:
+                nit = row['nit'].strip()
+                empresa = row['empresa'].strip()
+                categoria = row['categoria'].strip()
+                
+                if not nit or not categoria:
+                    results['errors'].append(f'Fila {csv_reader.line_num}: NIT, empresa y categoría son requeridos')
+                    continue
+                
+                conn.execute('INSERT INTO emisores (nit, empresa, categoria) VALUES (?, ?, ?)',
+                           (nit, categoria))
+                results['success'] += 1
+                
+            except sqlite3.IntegrityError:
+                results['errors'].append(f'Fila {csv_reader.line_num}: El NIT {nit} ya existe')
+            except Exception as e:
+                results['errors'].append(f'Fila {csv_reader.line_num}: Error - {str(e)}')
+        
+        conn.commit()
+        return jsonify(results)
+    
+    except Exception as e:
+        return jsonify({'error': f'Error al procesar el archivo: {str(e)}'}), 500
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=False)

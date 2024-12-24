@@ -100,6 +100,18 @@
         button:active {
             transform: scale(0.95);
         }
+        .button-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .manage-button {
+            background-color: #2ecc71;
+            flex: 1;
+        }
+        .manage-button:hover {
+            background-color: #27ae60;
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -125,8 +137,11 @@
         <form action="/upload" method="POST" enctype="multipart/form-data">
             <label for="file">Seleccionar archivo:</label>
             <input type="file" name="file" id="file" accept=".xls,.xlsx,.csv" required>
-            <button type="submit">Subir Archivo</button>
+            <button type="submit" style="margin-bottom: 10px;">Subir Archivo</button>
         </form>
+        <a href="{{ url_for('manage_nits') }}" style="flex: 1;">
+            <button class="manage-button" style="width: 100%;">Administrar NITs</button>
+        </a>
     </div>
 </body>
 </html>
